@@ -21,24 +21,35 @@ AI_PIECE = 2
 
 WINDOW_LENGTH = 5
 
+# create_board() สำหรับสร้างเซตบอร์ดของเกมส์ โดยจะมีขนาดตามที่กำหนดไว้ ในที่นี้เป็น 7row และ 9column และจะเป็นเซตเริ่มต้นที่มีค่าเป็น 0 ทั้งหมด
 def create_board():
 	board = np.zeros((ROW_COUNT,COLUMN_COUNT))
 	return board
 
+#drop_piece(board, row, col, piece) สำหรับวางลูกลงในตำแหน่งที่กำหนดให้ โดย row และ col คือตำแหน่งที่ต้องการวางลูกลงไป และ piece คือเลข 1 หรือ 2 ซึ่งแทนด้วยชื่อ PLAYER_PIECE และ AI_PIECE ตามลำดับ
 def drop_piece(board, row, col, piece):
 	board[row][col] = piece
 
+#is_valid_location(board, col) สำหรับตรวจสอบว่าตำแหน่งที่ต้องการวางลูกได้หรือไม่
 def is_valid_location(board, col):
 	return board[ROW_COUNT-1][col] == 0
 
+#get_next_open_row(board, col) สำหรับเปิดแถวถัดไป
 def get_next_open_row(board, col):
 	for r in range(ROW_COUNT):
 		if board[r][col] == 0:
 			return r
 
+#print_board(board):print board
 def print_board(board):
 	print(np.flip(board, 0))
 
+#ฟังก์ชั่นที่ตรวจสอบว่ามีการเล่นเพื่อชนะในเกมส์ Connect Four หรือไม่ โดยฟังก์ชั่นนี้รับอาร์กิวเมนต์สองตัวคือ board และ piece โดย board จะเป็นตารางสี่เหลี่ยมขนาด 6 x 7 ซึ่งแทนกระดานของเกมส์ Connect Four และ piece จะเป็นตัวแทนของเครื่องหรือผู้เล่นที่ทำการเรียกใช้ฟังก์ชั่นนี้ โดยจะตรวจสอบการชนะในทิศทางต่าง ๆ ดังนี้
+# ตรวจสอบการชนะในแนวนอน
+# ตรวจสอบการชนะในแนวตั้ง
+# ตรวจสอบการชนะในแนวเฉียงบวก
+# ตรวจสอบการชนะในแนวเฉียงลบ
+# หากมีการชนะจะส่งค่า True กลับมา ถ้าไม่มีการชนะจะส่งค่า False กลับมา
 def winning_move(board, piece):
 	# Check horizontal locations for win
 	for c in range(COLUMN_COUNT-4):
@@ -64,6 +75,7 @@ def winning_move(board, piece):
 			if board[r][c] == piece and board[r-1][c+1] == piece and board[r-2][c+2] == piece and board[r-3][c+3] == piece and board[r-4][c+4] == piece:
 				return True
 
+#evaluate_window(window, piece):สำหรับการให้คะแนนประเมิน
 def evaluate_window(window, piece):
 	score = 0
 	opp_piece = PLAYER_PIECE
@@ -72,21 +84,20 @@ def evaluate_window(window, piece):
 
 	if window.count(piece) == 5:
 		score += 100
-	elif window.count(piece) == 4:
+	elif window.count(piece) == 4 and window.count(EMPTY) == 1:
 		score += 10
-	elif window.count(piece) == 3 and window.count(EMPTY) == 1:
+	elif window.count(piece) == 3 and window.count(EMPTY) == 2:
 		score += 5
-	elif window.count(piece) == 2 and window.count(EMPTY) == 2:
+	elif window.count(piece) == 2 and window.count(EMPTY) == 3:
 		score += 2
-
-	if window.count(opp_piece) == 3 and window.count(EMPTY) == 1:
+	if window.count(opp_piece) == 4 and window.count(EMPTY) == 1:
 		score -= 4
 
 	return score
 
+#score_position(board, piece):สำหรับการให้คะแนนต่ำแหน่งที่วางเหรียญ
 def score_position(board, piece):
 	score = 0
-
 	## Score center column
 	center_array = [int(i) for i in list(board[:, COLUMN_COUNT//2])]
 	center_count = center_array.count(piece)
@@ -119,9 +130,11 @@ def score_position(board, piece):
 
 	return score
 
+#is_terminal_node(board):สำหรับรับค่าboardมา และดูว่าเกมจะจบหรือไม่
 def is_terminal_node(board):
 	return winning_move(board, PLAYER_PIECE) or winning_move(board, AI_PIECE) or len(get_valid_locations(board)) == 0
 
+# minimax(board, depth, alpha, beta, maximizingPlayer):เป็นอัลกอลิทึมสำหรับโปรแกรมนี้
 def minimax(board, depth, alpha, beta, maximizingPlayer):
 	valid_locations = get_valid_locations(board)
 	is_terminal = is_terminal_node(board)
@@ -167,6 +180,7 @@ def minimax(board, depth, alpha, beta, maximizingPlayer):
 				break
 		return column, value
 
+#get_valid_locations(board) โดยจะวนลูปเช็คแต่ละคอลัมน์ว่าตำแหน่งดังกล่าวว่างหรือไม่ ถ้าว่างก็จะเพิ่มลงในรายการ valid_locations 
 def get_valid_locations(board):
 	valid_locations = []
 	for col in range(COLUMN_COUNT):
@@ -187,9 +201,9 @@ def pick_best_move(board, piece):
 		if score > best_score:
 			best_score = score
 			best_col = col
-
 	return best_col
 
+# draw_board(board):สำหรับ pygame แสดงหน้าเอาไว้เล่นเกมกับAI
 def draw_board(board):
 	for c in range(COLUMN_COUNT):
 		for r in range(ROW_COUNT):
@@ -243,7 +257,6 @@ while not game_over:
 
 		if event.type == pygame.MOUSEBUTTONDOWN:
 			pygame.draw.rect(screen, BLACK, (0,0, width, SQUARESIZE))
-			#print(event.pos)
 			# Ask for Player 1 Input
 			if turn == PLAYER:
 				posx = event.pos[0]
@@ -268,12 +281,9 @@ while not game_over:
 	# # Ask for Player 2 Input
 	if turn == AI and not game_over:				
 
-		#col = random.randint(0, COLUMN_COUNT-1)
-		#col = pick_best_move(board, AI_PIECE)
 		col, minimax_score = minimax(board, 5, -math.inf, math.inf, True)
 
 		if is_valid_location(board, col):
-			#pygame.time.wait(500)
 			row = get_next_open_row(board, col)
 			drop_piece(board, row, col, AI_PIECE)
 
@@ -290,3 +300,4 @@ while not game_over:
 
 	if game_over:
 		pygame.time.wait(3000)
+#ใช้รอเวลา
